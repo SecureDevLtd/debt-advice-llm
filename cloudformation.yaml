@@ -1,0 +1,444 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Creates an Amazon Bedrock Knowledge Base with Amazon OpenSearch Serverless as the
+  vector store along with web data sources and an S3 bucket for optional data sources to be uploaded.
+
+Parameters:
+  Region:
+    Type: String
+    Description: AWS Region where Bedrock resources and embedding model are used.
+    Default: eu-west-2
+    AllowedPattern: '^[a-z]{2}-[a-z]+-[0-9]$'
+
+  Name:
+    Type: String
+    Description: Base name used for all created resources (no default).
+    MinLength: 3
+    MaxLength: 20
+    AllowedPattern: '^[a-z0-9-]+$'
+    ConstraintDescription: Use 3-20 characters with lowercase letters, numbers, and hyphens.
+
+  WebSeedUrlsGroup1:
+    Type: CommaDelimitedList
+    Description: 10 seed URLs for web data source group 1.
+    Default: https://handbook.fca.org.uk/handbook,https://ico.org.uk/for-organisations/,https://maps.org.uk/en/about-us/money-and-pensions-service-standards#,https://www.gov.uk/guidance/technical-guidance-for-official-receivers,https://www.gov.uk/guidance/guidance-on-personal-debt-relief-options-company-liquidation-investigation-and-enforcement,https://www.fca.org.uk/firms/consumer-duty,https://www.gov.uk/options-for-dealing-with-your-debts/breathing-space,https://www.gov.uk/government/publications/debt-respite-scheme-breathing-space-guidance/debt-respite-scheme-breathing-space-guidance-for-creditors,https://maps.org.uk/en/our-work/our-debt-work/mental-health-crisis-breathing-space#,https://www.gov.uk/government/publications/debt-respite-scheme-breathing-space-guidance-on-mental-health-crisis-breathing-space
+
+  WebSeedUrlsGroup2:
+    Type: CommaDelimitedList
+    Description: 10 seed URLs for web data source group 2.
+    Default: https://www.fca.org.uk/publications/policy-statements/ps24-2-strengthening-protections-borrowers-financial-difficulty,https://cpag.org.uk/shop/handbook/debt-advice-handbook-16th-ed,https://www.gov.uk/government/publications/public-sector-toolkits/economic-abuse-toolkit-html,https://www.gov.uk/options-for-dealing-with-your-debts,https://www.ofwat.gov.uk/regulated-companies/vulnerability/paying-fair-guidelines/,https://www.ccw.org.uk/save-money-and-water/help-with-bills/dealing-with-debt/,https://ukrn.org.uk/ukrn-cost-of-living-and-accessibility-leaflets-updated/,https://www.ofwat.gov.uk/regulated-companies/vulnerability/priority-services-register-guidance/,https://www.ofgem.gov.uk/information-consumers/energy-advice-households/get-help-with-your-energy-bills,https://www.ofgem.gov.uk/information-consumers/energy-advice-households/get-help-with-your-energy-bills
+
+  WebSeedUrlsGroup3:
+    Type: CommaDelimitedList
+    Description: 10 seed URLs for web data source group 3.
+    Default: https://www.gov.uk/government/publications/individual-voluntary-arrangement-iva-protocol/iva-protocol-2025,https://epr.ofgem.gov.uk/c/9wgWVKeHRymQ3pBbiptyqA/p/0196c209-4e4c-4e2b-92ae-525b634f2f51/wvp/448ed85b-b4ca-40a6-b04c-bda6335e78c2,https://epr.ofgem.gov.uk/c/xy42ijGNQHGZlwVFYcixCw/p/b30b97ae-de90-43e3-9526-3833c110b0fe/wvp/4358d2ec-f34e-47d1-9053-59a47d284d52,https://www.gov.uk/browse/benefits,https://www.ofwat.gov.uk/regulated-companies/vulnerability/paying-fair-guidelines/paying-fair-guidelines-to-support-customers-in-debt/,https://askcpag.org.uk/?id=-263775&_gl=1*3ti2j8*_ga*NzQ3NjM3MzYzLjE3NzAxMjg2MTI.*_ga_64Z2B618ZP*czE3NzAxMjg2MTAkbzEkZzAkdDE3NzAxMjg2MTAkajYwJGwwJGgw,https://askcpag.org.uk/?id=-258291&_gl=1*hi1ums*_ga*NzQ3NjM3MzYzLjE3NzAxMjg2MTI.*_ga_64Z2B618ZP*czE3NzAxMjg2MTAkbzEkZzEkdDE3NzAxMjg3MDAkajYwJGwwJGgw,https://askcpag.org.uk/?id=-266382&_gl=1*hi1ums*_ga*NzQ3NjM3MzYzLjE3NzAxMjg2MTI.*_ga_64Z2B618ZP*czE3NzAxMjg2MTAkbzEkZzEkdDE3NzAxMjg3MDAkajYwJGwwJGgw,https://askcpag.org.uk/publications/-259137/debt-advice-handbook-scotland-1st-ed-with-new-material?_gl=1*125md3l*_ga*NzQ3NjM3MzYzLjE3NzAxMjg2MTI.*_ga_64Z2B618ZP*czE3NzAxMjg2MTAkbzEkZzEkdDE3NzAxMjg3MjgkajMyJGwwJGgw,https://nationaldebtline.org/get-information/guides/high-court-enforcement-ew/
+
+  WebSeedUrlsGroup4:
+    Type: CommaDelimitedList
+    Description: 10 seed URLs for web data source group 4.
+    Default: https://securedev-llm-maps-data.s3.eu-west-2.amazonaws.com/documents/Debt_Strategy_(5).pdf,https://securedev-llm-maps-data.s3.eu-west-2.amazonaws.com/documents/DRS-working-paper-final.pdf,https://securedev-llm-maps-data.s3.eu-west-2.amazonaws.com/documents/Economic_Abuse_Toolkit.pdf,https://securedev-llm-maps-data.s3.eu-west-2.amazonaws.com/documents/FCG.pdf,https://securedev-llm-maps-data.s3.eu-west-2.amazonaws.com/documents/fg21-1.pdf,https://securedev-llm-maps-data.s3.eu-west-2.amazonaws.com/documents/fg22-5.pdf,https://securedev-llm-maps-data.s3.eu-west-2.amazonaws.com/documents/Priority-services-registers-%E2%80%93-standards-for-water-companies-in-England-and-Wales-from-1-April-2025.pdf,https://securedev-llm-maps-data.s3.eu-west-2.amazonaws.com/documents/maps-standards-toolkit-debt-advice-services-february-2026.pdf
+
+Rules:
+  RegionMustMatchStack:
+    Assertions:
+      - Assert:
+          Fn::Equals:
+            - Ref: AWS::Region
+            - Ref: Region
+        AssertDescription: The Region parameter must match the stack deployment region.
+
+Resources:
+  KnowledgeBaseDataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${Name}-${AWS::AccountId}-${AWS::Region}-kb-data'
+      VersioningConfiguration:
+        Status: Enabled
+
+  OpenSearchEncryptionPolicy:
+    Type: AWS::OpenSearchServerless::SecurityPolicy
+    Properties:
+      Name: !Sub '${Name}-enc-policy'
+      Type: encryption
+      Policy: !Sub |
+        {
+          "Rules": [
+            {
+              "ResourceType": "collection",
+              "Resource": ["collection/${Name}-kb"]
+            }
+          ],
+          "AWSOwnedKey": true
+        }
+
+  OpenSearchNetworkPolicy:
+    Type: AWS::OpenSearchServerless::SecurityPolicy
+    Properties:
+      Name: !Sub '${Name}-net-policy'
+      Type: network
+      Policy: !Sub |
+        [
+          {
+            "Description": "Allow Bedrock and account access to collection endpoint",
+            "Rules": [
+              {
+                "ResourceType": "collection",
+                "Resource": ["collection/${Name}-kb"]
+              }
+            ],
+            "AllowFromPublic": true
+          }
+        ]
+
+  VectorCollection:
+    Type: AWS::OpenSearchServerless::Collection
+    DependsOn:
+      - OpenSearchEncryptionPolicy
+      - OpenSearchNetworkPolicy
+    Properties:
+      Name: !Sub '${Name}-kb'
+      Description: !Sub 'Vector collection for ${Name} Bedrock Knowledge Base'
+      Type: VECTORSEARCH
+
+  BedrockKnowledgeBaseRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${Name}-bedrock-kb-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - bedrock.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub '${Name}-kb-role-policy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: S3ReadAccess
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !GetAtt KnowledgeBaseDataBucket.Arn
+                  - !Sub '${KnowledgeBaseDataBucket.Arn}/*'
+              - Sid: InvokeEmbeddingModel
+                Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                Resource: !Sub 'arn:aws:bedrock:${Region}::foundation-model/amazon.titan-embed-text-v2:0'
+              - Sid: OpenSearchServerlessApiAccess
+                Effect: Allow
+                Action:
+                  - aoss:APIAccessAll
+                  - aoss:BatchGetCollection
+                  - aoss:ListCollections
+                Resource: '*'
+
+  OpenSearchDataAccessPolicy:
+    Type: AWS::OpenSearchServerless::AccessPolicy
+    DependsOn:
+      - VectorCollection
+      - BedrockKnowledgeBaseRole
+    Properties:
+      Name: !Sub '${Name}-data-policy'
+      Type: data
+      Policy: !Sub |
+        [
+          {
+            "Description": "Allow Bedrock KB role to manage collection and vector index",
+            "Rules": [
+              {
+                "ResourceType": "collection",
+                "Resource": ["collection/${Name}-kb"],
+                "Permission": [
+                  "aoss:DescribeCollectionItems",
+                  "aoss:CreateCollectionItems",
+                  "aoss:UpdateCollectionItems",
+                  "aoss:DeleteCollectionItems"
+                ]
+              },
+              {
+                "ResourceType": "index",
+                "Resource": ["index/${Name}-kb/*"],
+                "Permission": [
+                  "aoss:CreateIndex",
+                  "aoss:DeleteIndex",
+                  "aoss:UpdateIndex",
+                  "aoss:DescribeIndex",
+                  "aoss:ReadDocument",
+                  "aoss:WriteDocument"
+                ]
+              }
+            ],
+            "Principal": [
+              "${BedrockKnowledgeBaseRole.Arn}",
+              "arn:aws:iam::${AWS::AccountId}:root"
+            ]
+          }
+        ]
+
+  OpenSearchVectorIndex:
+    Type: AWS::OpenSearchServerless::Index
+    DependsOn:
+      - OpenSearchDataAccessPolicy
+    Properties:
+      CollectionEndpoint: !GetAtt VectorCollection.CollectionEndpoint
+      IndexName: !Sub '${Name}-kb-index'
+      Settings:
+        Index:
+          Knn: true
+          KnnAlgoParamEfSearch: 512
+      Mappings:
+        Properties:
+          bedrock-knowledge-base-default-vector:
+            Type: knn_vector
+            Dimension: 1024
+            Method:
+              Engine: faiss
+              Name: hnsw
+              Parameters:
+                M: 16
+                EfConstruction: 512
+              SpaceType: l2
+          AMAZON_BEDROCK_TEXT_CHUNK:
+            Type: text
+            Index: true
+          AMAZON_BEDROCK_METADATA:
+            Type: text
+            Index: false
+          id:
+            Type: text
+            Index: true
+          x-amz-bedrock-kb-data-source-id:
+            Type: text
+            Index: true
+          x-amz-bedrock-kb-source-file-modality:
+            Type: text
+            Index: true
+          x-amz-bedrock-kb-source-uri:
+            Type: text
+            Index: true
+
+  BedrockKnowledgeBase:
+    Type: AWS::Bedrock::KnowledgeBase
+    DependsOn:
+      - OpenSearchDataAccessPolicy
+      - OpenSearchVectorIndex
+    Properties:
+      Name: !Sub '${Name}-kb'
+      Description: !Sub 'Knowledge Base for ${Name}'
+      RoleArn: !GetAtt BedrockKnowledgeBaseRole.Arn
+      KnowledgeBaseConfiguration:
+        Type: VECTOR
+        VectorKnowledgeBaseConfiguration:
+          EmbeddingModelArn: !Sub 'arn:aws:bedrock:${Region}::foundation-model/amazon.titan-embed-text-v2:0'
+      StorageConfiguration:
+        Type: OPENSEARCH_SERVERLESS
+        OpensearchServerlessConfiguration:
+          CollectionArn: !GetAtt VectorCollection.Arn
+          VectorIndexName: !Sub '${Name}-kb-index'
+          FieldMapping:
+            VectorField: bedrock-knowledge-base-default-vector
+            TextField: AMAZON_BEDROCK_TEXT_CHUNK
+            MetadataField: AMAZON_BEDROCK_METADATA
+
+  BedrockS3DataSource:
+    Type: AWS::Bedrock::DataSource
+    Properties:
+      Name: !Sub '${Name}-s3-ds'
+      KnowledgeBaseId: !Ref BedrockKnowledgeBase
+      DataDeletionPolicy: RETAIN
+      DataSourceConfiguration:
+        Type: S3
+        S3Configuration:
+          BucketArn: !GetAtt KnowledgeBaseDataBucket.Arn
+      VectorIngestionConfiguration:
+        ChunkingConfiguration:
+          ChunkingStrategy: SEMANTIC
+          SemanticChunkingConfiguration:
+            MaxTokens: 300
+            BufferSize: 1
+            BreakpointPercentileThreshold: 95
+
+  BedrockWebDataSourceGroup1:
+    Type: AWS::Bedrock::DataSource
+    Properties:
+      Name: !Sub '${Name}-web-ds-1'
+      KnowledgeBaseId: !Ref BedrockKnowledgeBase
+      DataDeletionPolicy: RETAIN
+      DataSourceConfiguration:
+        Type: WEB
+        WebConfiguration:
+          SourceConfiguration:
+            UrlConfiguration:
+              SeedUrls:
+                - Url: !Select [0, !Ref WebSeedUrlsGroup1]
+                - Url: !Select [1, !Ref WebSeedUrlsGroup1]
+                - Url: !Select [2, !Ref WebSeedUrlsGroup1]
+                - Url: !Select [3, !Ref WebSeedUrlsGroup1]
+                - Url: !Select [4, !Ref WebSeedUrlsGroup1]
+                - Url: !Select [5, !Ref WebSeedUrlsGroup1]
+                - Url: !Select [6, !Ref WebSeedUrlsGroup1]
+                - Url: !Select [7, !Ref WebSeedUrlsGroup1]
+                - Url: !Select [8, !Ref WebSeedUrlsGroup1]
+                - Url: !Select [9, !Ref WebSeedUrlsGroup1]
+          CrawlerConfiguration:
+            CrawlerLimits:
+              MaxPages: 25000
+              RateLimit: 300
+            ExclusionFilters:
+              - '.*\?.*'
+              - '.*/(login|signin|cart|checkout).*'
+      VectorIngestionConfiguration:
+        ChunkingConfiguration:
+          ChunkingStrategy: SEMANTIC
+          SemanticChunkingConfiguration:
+            MaxTokens: 300
+            BufferSize: 1
+            BreakpointPercentileThreshold: 95
+
+  BedrockWebDataSourceGroup2:
+    Type: AWS::Bedrock::DataSource
+    Properties:
+      Name: !Sub '${Name}-web-ds-2'
+      KnowledgeBaseId: !Ref BedrockKnowledgeBase
+      DataDeletionPolicy: RETAIN
+      DataSourceConfiguration:
+        Type: WEB
+        WebConfiguration:
+          SourceConfiguration:
+            UrlConfiguration:
+              SeedUrls:
+                - Url: !Select [0, !Ref WebSeedUrlsGroup2]
+                - Url: !Select [1, !Ref WebSeedUrlsGroup2]
+                - Url: !Select [2, !Ref WebSeedUrlsGroup2]
+                - Url: !Select [3, !Ref WebSeedUrlsGroup2]
+                - Url: !Select [4, !Ref WebSeedUrlsGroup2]
+                - Url: !Select [5, !Ref WebSeedUrlsGroup2]
+                - Url: !Select [6, !Ref WebSeedUrlsGroup2]
+                - Url: !Select [7, !Ref WebSeedUrlsGroup2]
+                - Url: !Select [8, !Ref WebSeedUrlsGroup2]
+                - Url: !Select [9, !Ref WebSeedUrlsGroup2]
+          CrawlerConfiguration:
+            CrawlerLimits:
+              MaxPages: 25000
+              RateLimit: 300
+            ExclusionFilters:
+              - '.*\?.*'
+              - '.*/(login|signin|cart|checkout).*'
+      VectorIngestionConfiguration:
+        ChunkingConfiguration:
+          ChunkingStrategy: SEMANTIC
+          SemanticChunkingConfiguration:
+            MaxTokens: 300
+            BufferSize: 1
+            BreakpointPercentileThreshold: 95
+
+  BedrockWebDataSourceGroup3:
+    Type: AWS::Bedrock::DataSource
+    Properties:
+      Name: !Sub '${Name}-web-ds-3'
+      KnowledgeBaseId: !Ref BedrockKnowledgeBase
+      DataDeletionPolicy: RETAIN
+      DataSourceConfiguration:
+        Type: WEB
+        WebConfiguration:
+          SourceConfiguration:
+            UrlConfiguration:
+              SeedUrls:
+                - Url: !Select [0, !Ref WebSeedUrlsGroup3]
+                - Url: !Select [1, !Ref WebSeedUrlsGroup3]
+                - Url: !Select [2, !Ref WebSeedUrlsGroup3]
+                - Url: !Select [3, !Ref WebSeedUrlsGroup3]
+                - Url: !Select [4, !Ref WebSeedUrlsGroup3]
+                - Url: !Select [5, !Ref WebSeedUrlsGroup3]
+                - Url: !Select [6, !Ref WebSeedUrlsGroup3]
+                - Url: !Select [7, !Ref WebSeedUrlsGroup3]
+                - Url: !Select [8, !Ref WebSeedUrlsGroup3]
+                - Url: !Select [9, !Ref WebSeedUrlsGroup3]
+          CrawlerConfiguration:
+            CrawlerLimits:
+              MaxPages: 25000
+              RateLimit: 300
+            ExclusionFilters:
+              - '.*\?.*'
+              - '.*/(login|signin|cart|checkout).*'
+      VectorIngestionConfiguration:
+        ChunkingConfiguration:
+          ChunkingStrategy: SEMANTIC
+          SemanticChunkingConfiguration:
+            MaxTokens: 300
+            BufferSize: 1
+            BreakpointPercentileThreshold: 95
+
+  BedrockWebDataSourceGroup4:
+    Type: AWS::Bedrock::DataSource
+    Properties:
+      Name: !Sub '${Name}-web-ds-4'
+      KnowledgeBaseId: !Ref BedrockKnowledgeBase
+      DataDeletionPolicy: RETAIN
+      DataSourceConfiguration:
+        Type: WEB
+        WebConfiguration:
+          SourceConfiguration:
+            UrlConfiguration:
+              SeedUrls:
+                - Url: !Select [0, !Ref WebSeedUrlsGroup4]
+                - Url: !Select [1, !Ref WebSeedUrlsGroup4]
+                - Url: !Select [2, !Ref WebSeedUrlsGroup4]
+                - Url: !Select [3, !Ref WebSeedUrlsGroup4]
+                - Url: !Select [4, !Ref WebSeedUrlsGroup4]
+                - Url: !Select [5, !Ref WebSeedUrlsGroup4]
+                - Url: !Select [6, !Ref WebSeedUrlsGroup4]
+          CrawlerConfiguration:
+            CrawlerLimits:
+              MaxPages: 25000
+              RateLimit: 300
+            ExclusionFilters:
+              - '.*\?.*'
+              - '.*/(login|signin|cart|checkout).*'
+      VectorIngestionConfiguration:
+        ChunkingConfiguration:
+          ChunkingStrategy: SEMANTIC
+          SemanticChunkingConfiguration:
+            MaxTokens: 300
+            BufferSize: 1
+            BreakpointPercentileThreshold: 95
+
+Outputs:
+  BucketName:
+    Description: S3 bucket for source documents.
+    Value: !Ref KnowledgeBaseDataBucket
+
+  OpenSearchCollectionArn:
+    Description: OpenSearch Serverless vector collection ARN.
+    Value: !GetAtt VectorCollection.Arn
+
+  KnowledgeBaseId:
+    Description: Bedrock Knowledge Base ID.
+    Value: !Ref BedrockKnowledgeBase
+
+  DataSourceId:
+    Description: Bedrock Data Source ID.
+    Value: !Ref BedrockS3DataSource
+
+  WebDataSourceGroup1Id:
+    Description: Bedrock Web Data Source Group 1 ID.
+    Value: !Ref BedrockWebDataSourceGroup1
+
+  WebDataSourceGroup2Id:
+    Description: Bedrock Web Data Source Group 2 ID.
+    Value: !Ref BedrockWebDataSourceGroup2
+
+  WebDataSourceGroup3Id:
+    Description: Bedrock Web Data Source Group 3 ID.
+    Value: !Ref BedrockWebDataSourceGroup3
+
+  WebDataSourceGroup4Id:
+    Description: Bedrock Web Data Source Group 4 ID.
+    Value: !Ref BedrockWebDataSourceGroup4
