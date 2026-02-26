@@ -37,6 +37,11 @@ Parameters:
     Type: CommaDelimitedList
     Description: 10 seed URLs for web data source group 4.
     Default: https://securedev-llm-maps-data.s3.eu-west-2.amazonaws.com/documents/Debt_Strategy_(5).pdf,https://securedev-llm-maps-data.s3.eu-west-2.amazonaws.com/documents/DRS-working-paper-final.pdf,https://securedev-llm-maps-data.s3.eu-west-2.amazonaws.com/documents/Economic_Abuse_Toolkit.pdf,https://securedev-llm-maps-data.s3.eu-west-2.amazonaws.com/documents/FCG.pdf,https://securedev-llm-maps-data.s3.eu-west-2.amazonaws.com/documents/fg21-1.pdf,https://securedev-llm-maps-data.s3.eu-west-2.amazonaws.com/documents/fg22-5.pdf,https://securedev-llm-maps-data.s3.eu-west-2.amazonaws.com/documents/Priority-services-registers-%E2%80%93-standards-for-water-companies-in-England-and-Wales-from-1-April-2025.pdf,https://securedev-llm-maps-data.s3.eu-west-2.amazonaws.com/documents/maps-standards-toolkit-debt-advice-services-february-2026.pdf
+  
+  WebSeedUrlsGroup5:
+    Type: CommaDelimitedList
+    Description: 10 seed URLs for web data source group 4.
+    Default: https://aib.gov.uk/,https://www.economy-ni.gov.uk/topics/insolvency-service
 
 Rules:
   RegionMustMatchStack:
@@ -395,6 +400,35 @@ Resources:
                 - Url: !Select [4, !Ref WebSeedUrlsGroup4]
                 - Url: !Select [5, !Ref WebSeedUrlsGroup4]
                 - Url: !Select [6, !Ref WebSeedUrlsGroup4]
+          CrawlerConfiguration:
+            CrawlerLimits:
+              MaxPages: 25000
+              RateLimit: 300
+            ExclusionFilters:
+              - '.*\?.*'
+              - '.*/(login|signin|cart|checkout).*'
+      VectorIngestionConfiguration:
+        ChunkingConfiguration:
+          ChunkingStrategy: SEMANTIC
+          SemanticChunkingConfiguration:
+            MaxTokens: 300
+            BufferSize: 1
+            BreakpointPercentileThreshold: 95
+
+  BedrockWebDataSourceGroup5:
+    Type: AWS::Bedrock::DataSource
+    Properties:
+      Name: !Sub '${Name}-web-ds-5'
+      KnowledgeBaseId: !Ref BedrockKnowledgeBase
+      DataDeletionPolicy: RETAIN
+      DataSourceConfiguration:
+        Type: WEB
+        WebConfiguration:
+          SourceConfiguration:
+            UrlConfiguration:
+              SeedUrls:
+                - Url: !Select [0, !Ref WebSeedUrlsGroup5]
+                - Url: !Select [1, !Ref WebSeedUrlsGroup5]
           CrawlerConfiguration:
             CrawlerLimits:
               MaxPages: 25000
