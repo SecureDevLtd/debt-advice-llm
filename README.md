@@ -57,8 +57,6 @@ Use the button above, or open this direct link:
 
 ## Deploy with AWS CLI
 
-[knowledge base schema (1).xlsx](https://github.com/user-attachments/files/26604994/knowledge.base.schema.1.xlsx)
-
 
 ```bash
 aws cloudformation deploy \
@@ -72,3 +70,6 @@ aws cloudformation deploy \
 ## After deployment
 
 CloudFormation creates data sources but does not run ingestion jobs automatically. Start ingestion for each data source in Bedrock (console/API) after the stack is complete.
+
+[knowledge base schema1.pdf](https://github.com/user-attachments/files/26605197/knowledge.base.schema1.pdf)
+
