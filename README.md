@@ -57,6 +57,9 @@ Use the button above, or open this direct link:
 
 ## Deploy with AWS CLI
 
+[knowledge base schema (1).xlsx](https://github.com/user-attachments/files/26604994/knowledge.base.schema.1.xlsx)
+
+
 ```bash
 aws cloudformation deploy \
   --template-file cloudformation.yaml \
