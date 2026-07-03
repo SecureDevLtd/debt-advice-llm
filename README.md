@@ -73,3 +73,9 @@ CloudFormation creates data sources but does not run ingestion jobs automaticall
 
 [knowledge base schema1.pdf](https://github.com/user-attachments/files/26605197/knowledge.base.schema1.pdf)
 
+[Appendix 1.pdf](https://github.com/user-attachments/files/29640521/Appendix.1.pdf)
+
+[Appendix 2.pdf](https://github.com/user-attachments/files/29640538/Appendix.2.pdf)
+
+
+
